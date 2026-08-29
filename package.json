@@ -1,0 +1,13 @@
+{
+  "name": "flop-dossier",
+  "version": "1.0.0",
+  "description": "Client-side DID identity + Technocore signing UI for FLOP contributions. Pure static site — no backend, no build step.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/smoke.crypto.mjs && node tests/smoke.vault.mjs && node tests/smoke.dom.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}

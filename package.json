@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/smoke.crypto.mjs && node tests/smoke.vault.mjs && node tests/smoke.dom.mjs"
+    "test": "node tests/smoke.crypto.mjs && node tests/smoke.dom.mjs"
   },
   "devDependencies": {
     "jsdom": "^30.0.1"

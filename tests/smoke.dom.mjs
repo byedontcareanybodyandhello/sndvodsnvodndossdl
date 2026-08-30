@@ -47,13 +47,15 @@ async function main() {
   const $ = (id) => window.document.getElementById(id);
 
   console.log("Page title:", window.document.title);
-  console.log("caseNumber text (should be replaced if app.js ran):", $("caseNumber").textContent);
   console.assert($("btnCreateIdentity"), "create-identity button exists");
   console.assert($("vault"), "vault sidebar exists");
+  console.assert(!$("caseNumber"), "case-number masthead line was intentionally removed");
 
   // Before any identity exists, later steps must be gated off.
   const lobbyTabBefore = window.document.querySelector('.entry-tab[data-entry="lobby"]');
+  const shareTabBefore = window.document.querySelector('.entry-tab[data-entry="share"]');
   console.assert(lobbyTabBefore.disabled, "lobby tab starts disabled with no identity yet");
+  console.assert(shareTabBefore.disabled, "share tab starts disabled with no identity yet");
   lobbyTabBefore.dispatchEvent(new window.Event("click", { bubbles: true }));
   await wait(30);
   console.assert($("panel-lobby").classList.contains("hidden"), "clicking a gated tab must not reveal its panel");
@@ -70,6 +72,7 @@ async function main() {
   console.assert($("vDid").textContent !== "not created", "vault sidebar shows the DID");
   console.assert($("secretReveal").textContent.length === 64, "SECRET_KEY (64 hex chars) auto-revealed after creation");
   console.assert(!lobbyTabBefore.disabled, "lobby tab becomes enabled once an identity exists");
+  console.assert(shareTabBefore.disabled, "share tab stays gated until a lobby post succeeds");
 
   // Switch tabs — should now be allowed.
   lobbyTabBefore.dispatchEvent(new window.Event("click", { bubbles: true }));

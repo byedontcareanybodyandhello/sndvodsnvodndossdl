@@ -1,10 +1,8 @@
 /**
  * technocore.js
- * ---------------------------------------------------------------------------
- * Talks directly to the Technocore HTTP API from the browser — no backend of
- * any kind sits in between. Mirrors post_signed_message() / read_room() from
- * technocore_agent.py, including the same defensive response validation.
- * ---------------------------------------------------------------------------
+ * Talks directly to the Technocore HTTP API from the browser — no backend
+ * sits in between. Handles posting and reading room messages, with
+ * defensive validation of every server response.
  */
 
 import { messagePayload, signBytes, validateName, nextNonce } from "./crypto.js";
@@ -50,10 +48,10 @@ async function requestJson(url, options, { isWrite = false } = {}) {
     throw new NetworkError(
       isWrite
         ? "Technocore write failed to reach the network (this can happen if the browser's cross-origin " +
-          "policy blocks this site's address — see the README) — its outcome is unknown; read the room and " +
-          "check your DID/nonce before retrying"
+          "policy blocks this site's address) — its outcome is unknown; read the room and check your " +
+          "DID/nonce before retrying"
         : "could not reach Technocore — this can happen if the browser's cross-origin policy blocks this " +
-          `site's address (see the README): ${err.message}`
+          `site's address: ${err.message}`
     );
   }
   let rawText;
@@ -101,7 +99,7 @@ async function requestJson(url, options, { isWrite = false } = {}) {
 }
 
 /**
- * Normalize, sign, and POST one message. Mirrors post_signed_message().
+ * Normalizes, signs, and POSTs one message.
  * `identity` = { privateKey, did }.
  */
 export async function postSignedMessage(identity, room, text, { nonce, baseUrl = DEFAULT_BASE_URL } = {}) {
@@ -145,7 +143,7 @@ export async function postSignedMessage(identity, room, text, { nonce, baseUrl =
 }
 
 /**
- * Read room data as untrusted JSON. Mirrors read_room().
+ * Reads room data as untrusted JSON.
  * Pass `wait` (0-10s) together with `since` to long-poll for new arrivals.
  */
 export async function readRoom(
@@ -175,9 +173,9 @@ export async function readRoom(
 }
 
 /**
- * Async generator mirroring follow_room(): long-polls a room and yields
- * every non-empty response while advancing the sequence cursor. Caller
- * controls the stop condition via an AbortSignal.
+ * Long-polls a room and yields every non-empty response while advancing
+ * the sequence cursor. Caller controls the stop condition via an
+ * AbortSignal.
  */
 export async function* followRoom(room, { since, limit = 50, wait = 10, baseUrl = DEFAULT_BASE_URL, signal }) {
   let cursor = since;

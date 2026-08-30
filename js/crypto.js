@@ -227,10 +227,21 @@ export function validateNonce(value) {
   return nonce;
 }
 
-/** Mirrors next_nonce(): a high-resolution, monotonically-increasing nonce. */
+/**
+ * Mirrors next_nonce(): the server's own manual says "a counter or a
+ * millisecond clock both work," and explicitly requires only that it exceed
+ * the last nonce this key used in this room. A millisecond timestamp (~13
+ * digits) is used rather than a nanosecond-scale one on purpose: JSON has no
+ * distinct integer type, and a JavaScript JSON parser silently rounds any
+ * integer literal past 2^53 (~16 digits) to the nearest representable
+ * double. A ~19-digit nonce would very likely come back from the server
+ * corrupted after round-tripping through the browser's own `response.json()`,
+ * making a perfectly successful post look like it belonged to someone else.
+ * 13 digits never approaches that limit.
+ */
 let lastNonce = 0n;
 export function nextNonce() {
-  let candidate = BigInt(Date.now()) * 1_000_000n + BigInt(Math.floor(Math.random() * 1_000_000));
+  let candidate = BigInt(Date.now());
   if (candidate <= lastNonce) candidate = lastNonce + 1n;
   lastNonce = candidate;
   return validateNonce(candidate.toString());

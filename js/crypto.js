@@ -1,28 +1,24 @@
 /**
  * crypto.js
- * ---------------------------------------------------------------------------
- * Browser-native port of the protocol logic in zunmax/technocore-did-starter
- * (technocore_agent.py). Every function here mirrors a specific function in
- * the Python CLI so the two stay bit-for-bit compatible on the wire.
- *
- * No external crypto library is used. Ed25519 keygen/sign/verify comes from
- * the native Web Crypto API (crypto.subtle). Private key material never
- * leaves this module except as an encrypted backup blob (see vault.js).
- * ---------------------------------------------------------------------------
+ * Ed25519 identity generation, did:key derivation, message signing and
+ * verification, and contribution-proof helpers. Uses only the browser's
+ * native Web Crypto API (crypto.subtle) — no external cryptography library.
+ * Private key material never leaves this module except as an encrypted
+ * or plaintext seed export the user explicitly requests (see vault.js).
  */
 
 export class ProtocolError extends Error {}
 export class IdentityError extends Error {}
 
-const MULTICODEC_ED25519 = new Uint8Array([0xed, 0x01]); // matches MULTICODEC_ED25519 in the CLI
-const MULTIBASE_LENGTH = 48; // matches MULTIBASE_LENGTH
-const SIGNATURE_LENGTH = 86; // matches SIGNATURE_LENGTH
-const MAX_MESSAGE_CHARS = 4096; // matches MAX_MESSAGE_CHARS
+const MULTICODEC_ED25519 = new Uint8Array([0xed, 0x01]);
+const MULTIBASE_LENGTH = 48;
+const SIGNATURE_LENGTH = 86;
+const MAX_MESSAGE_CHARS = 4096;
 
-const NAME_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/; // matches NAME_PATTERN
-const NONCE_RE = /^[0-9]{1,19}$/; // matches NONCE_PATTERN
-const SIGNATURE_RE = /^[A-Za-z0-9_-]{86}$/; // matches SIGNATURE_PATTERN
-const COMMIT_RE = /^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/; // matches COMMIT_PATTERN
+const NAME_RE = /^[a-z0-9][a-z0-9_-]{0,47}$/;
+const NONCE_RE = /^[0-9]{1,19}$/;
+const SIGNATURE_RE = /^[A-Za-z0-9_-]{86}$/;
+const COMMIT_RE = /^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/;
 
 const B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const B58_INDEX = Object.fromEntries([...B58_ALPHABET].map((c, i) => [c, i]));
@@ -101,7 +97,7 @@ function b64urlDecode(str) {
 
 /* ------------------------------------------------------- did:key derivation */
 
-/** Mirrors did_from_private_key(): raw 32-byte public key -> did:key:z6Mk... */
+/** Derives a did:key:z6Mk... identifier from a raw 32-byte Ed25519 public key. */
 export function didFromPublicKeyBytes(publicKeyRaw) {
   if (publicKeyRaw.length !== 32) {
     throw new IdentityError("public key must be 32 raw bytes");
@@ -113,7 +109,7 @@ export function didFromPublicKeyBytes(publicKeyRaw) {
   return "did:key:" + multibase;
 }
 
-/** Mirrors public_key_from_did(): did:key:z6Mk... -> raw 32-byte public key */
+/** Recovers the raw 32-byte Ed25519 public key from a did:key:z6Mk... identifier. */
 export function publicKeyBytesFromDid(did) {
   const prefix = "did:key:";
   if (typeof did !== "string" || !did.startsWith(prefix)) {
@@ -132,7 +128,7 @@ export function publicKeyBytesFromDid(did) {
 
 /* ------------------------------------------------------ key pair lifecycle */
 
-/** Generate a brand-new Ed25519 identity. Returns {privateKey, publicKeyRaw, did}. */
+/** Generates a new Ed25519 identity. Returns { privateKey, publicKeyRaw, did }. */
 export async function generateIdentity() {
   const pair = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
   const publicKeyRaw = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
@@ -141,10 +137,9 @@ export async function generateIdentity() {
 }
 
 /**
- * Rebuild a minimal RFC 8410 PKCS#8 document containing only the 32-byte
- * Ed25519 seed (no embedded public key). This is the same document shape
- * defined in RFC 8410 Appendix A; a spec-following WebCrypto implementation
- * derives the matching public key internally when this is imported.
+ * Builds a minimal RFC 8410 PKCS#8 document containing only the 32-byte
+ * Ed25519 seed. A spec-following WebCrypto implementation derives the
+ * matching public key internally when this is imported.
  */
 export function seedToPkcs8(seed32) {
   if (seed32.length !== 32) throw new IdentityError("seed must be 32 bytes");
@@ -153,7 +148,7 @@ export function seedToPkcs8(seed32) {
   return concatBytes(header, seed32);
 }
 
-/** Restore an identity from its raw 32-byte seed (the site's "SECRET_KEY"). */
+/** Restores an identity from its raw 32-byte seed (the site's "SECRET_KEY"). */
 export async function identityFromSeed(seed32) {
   const pkcs8 = seedToPkcs8(seed32);
   const privateKey = await crypto.subtle.importKey(
@@ -163,15 +158,13 @@ export async function identityFromSeed(seed32) {
     true,
     ["sign"]
   );
-  // JWK export always carries the derived public component ("x") for OKP keys,
-  // regardless of how the private key was imported.
   const jwk = await crypto.subtle.exportKey("jwk", privateKey);
   const publicKeyRaw = b64urlDecode(jwk.x);
   const did = didFromPublicKeyBytes(publicKeyRaw);
   return { privateKey, publicKeyRaw, did };
 }
 
-/** Export the raw 32-byte seed from a live private key (session-only; never persisted unencrypted). */
+/** Exports the raw 32-byte seed from a live private key. Session-only; never persisted unencrypted. */
 export async function exportSeed(privateKey) {
   const jwk = await crypto.subtle.exportKey("jwk", privateKey);
   return b64urlDecode(jwk.d);
@@ -194,13 +187,9 @@ export function seedFromHex(hex) {
 const INVISIBLE_CATEGORY_RE = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/gu;
 
 /**
- * Mirrors normalize_message(). Also applies Unicode NFC normalization: the
- * live Technocore server signs and stores whatever code points it is sent
- * without normalizing them itself (confirmed against its published manual),
- * so two visually-identical messages typed with different Unicode
- * decompositions would otherwise sign as different bytes. Normalizing here
- * keeps this client's output predictable and matches the "sign and send the
- * same form" guidance in that manual.
+ * Strips invisible/control Unicode categories, trims, applies NFC
+ * normalization for consistent signatures across browsers and operating
+ * systems, and enforces the message length limit.
  */
 export function normalizeMessage(text) {
   if (typeof text !== "string") throw new ProtocolError("message text must be a string");
@@ -228,16 +217,9 @@ export function validateNonce(value) {
 }
 
 /**
- * Mirrors next_nonce(): the server's own manual says "a counter or a
- * millisecond clock both work," and explicitly requires only that it exceed
- * the last nonce this key used in this room. A millisecond timestamp (~13
- * digits) is used rather than a nanosecond-scale one on purpose: JSON has no
- * distinct integer type, and a JavaScript JSON parser silently rounds any
- * integer literal past 2^53 (~16 digits) to the nearest representable
- * double. A ~19-digit nonce would very likely come back from the server
- * corrupted after round-tripping through the browser's own `response.json()`,
- * making a perfectly successful post look like it belonged to someone else.
- * 13 digits never approaches that limit.
+ * Generates a millisecond-timestamp nonce, monotonically increasing within
+ * this session and always within Number.MAX_SAFE_INTEGER so it round-trips
+ * losslessly through a JSON parser.
  */
 let lastNonce = 0n;
 export function nextNonce() {
@@ -247,7 +229,7 @@ export function nextNonce() {
   return validateNonce(candidate.toString());
 }
 
-/** Mirrors message_payload(): builds the exact `room|nonce|text` signed bytes. */
+/** Builds the exact `room|nonce|text` bytes that get signed. */
 export function messagePayload(room, nonce, text) {
   const validRoom = validateName(room);
   const validNonce = validateNonce(nonce);
@@ -256,7 +238,7 @@ export function messagePayload(room, nonce, text) {
   return { normalized, payload };
 }
 
-/** Mirrors sign_bytes(): returns an 86-char unpadded base64url signature. */
+/** Signs payload bytes with an Ed25519 private key; returns an 86-char unpadded base64url signature. */
 export async function signBytes(privateKey, payload) {
   const sigBuf = await crypto.subtle.sign({ name: "Ed25519" }, privateKey, payload);
   const encoded = b64urlEncode(new Uint8Array(sigBuf));
@@ -264,7 +246,7 @@ export async function signBytes(privateKey, payload) {
   return encoded;
 }
 
-/** Mirrors verify_bytes(): verifies a signature against a did:key. */
+/** Verifies a signature against a did:key and payload bytes. Throws on mismatch. */
 export async function verifyBytes(did, signature, payload) {
   if (!SIGNATURE_RE.test(signature || "")) {
     throw new ProtocolError("signature must contain 86 unpadded base64url characters");
@@ -304,18 +286,16 @@ function validateCommit(commit) {
   return commit.toLowerCase();
 }
 
-/** Mirrors contribution_payload(): canonical, sorted-key JSON bytes. */
+/** Builds the canonical, sorted-key JSON bytes for a contribution proof. */
 export function contributionPayload(artifactUrl, commit) {
   const url = validateArtifactUrl(artifactUrl);
   const lowerCommit = validateCommit(commit);
-  // Field order below is already alphabetical (artifact_url, commit, schema),
-  // matching Python's json.dumps(..., sort_keys=True).
   const record = { artifact_url: url, commit: lowerCommit, schema: "technocore-contribution-v1" };
   const canonical = JSON.stringify(record);
   return new TextEncoder().encode(canonical);
 }
 
-/** Mirrors create_contribution_proof(). */
+/** Creates a signed contribution proof linking a DID to an artifact URL and commit. */
 export async function createContributionProof(privateKey, did, artifactUrl, commit) {
   const payload = contributionPayload(artifactUrl, commit);
   const signature = await signBytes(privateKey, payload);
@@ -328,7 +308,7 @@ export async function createContributionProof(privateKey, did, artifactUrl, comm
   };
 }
 
-/** Mirrors verify_contribution_proof(). Throws on any mismatch. */
+/** Verifies a contribution proof. Throws on any mismatch. */
 export async function verifyContributionProof(proof) {
   if (!proof || proof.schema !== "technocore-contribution-proof-v1") {
     throw new ProtocolError("unsupported contribution proof schema");

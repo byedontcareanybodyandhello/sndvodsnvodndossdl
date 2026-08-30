@@ -1,24 +1,24 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ثبت مشارکت Technocore</title>
+<title>Technocore Contribution Signer</title>
 <meta name="description" content="Create a local Ed25519 DID, sign Technocore messages, and build a verifiable public contribution trail — entirely in your browser." />
-<link rel="stylesheet" href="./styles.css" />
+<link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
-<div class="warning-bar" dir="rtl">
-  <strong>هشدار امنیتی:</strong> هرگز SECRET_KEY خود را در ایکس (توییتر)، دیسکورد، تلگرام، گیت‌هاب یا هیچ چت پشتیبانی paste نکنید. فقط <code>PUBLIC_DID</code> عمومی است.
+<div class="warning-bar">
+  <strong>Security warning:</strong> never paste your SECRET_KEY into X (Twitter), Discord, Telegram, GitHub, or any support chat. Only your <code>PUBLIC_DID</code> is meant to be shared.
 </div>
 
 <header class="masthead">
   <div class="wrap">
     <div class="masthead-row">
       <div>
-        <h1>ثبت مشارکت Technocore</h1>
-        <p class="sub" dir="rtl">هویت Ed25519 خود را در همین مرورگر بسازید، پیام‌های امضاشده به Technocore بفرستید و یک زنجیرهٔ عمومی و قابل‌راستی‌آزمایی از مشارکت‌تان بسازید. کلید خصوصی هرگز از این صفحه خارج نمی‌شود.</p>
+        <h1>Technocore Contribution Signer</h1>
+        <p class="sub">Create your Ed25519 identity right in this browser, sign messages to Technocore, and build a public, verifiable trail of your contribution. Your private key never leaves this page.</p>
       </div>
       <nav class="masthead-links">
         <a href="https://technocore.chat/humans#r/room" target="_blank" rel="noopener">technocore.chat</a>
@@ -32,34 +32,34 @@
 
     <!-- ============================================================ MAIN -->
     <div>
-      <div class="entry-tabs" role="tablist" aria-label="مراحل پرونده" id="entryTabs">
-        <button class="entry-tab" role="tab" data-entry="identity" aria-selected="true"><span class="num">01</span> هویت <span class="state">SEALED</span></button>
-        <button class="entry-tab" role="tab" data-entry="lobby" aria-selected="false"><span class="num">02</span> لابی <span class="state">SIGNED</span></button>
-        <button class="entry-tab" role="tab" data-entry="contribution" aria-selected="false"><span class="num">03</span> مشارکت <span class="state">READY</span></button>
-        <button class="entry-tab" role="tab" data-entry="record" aria-selected="false"><span class="num">04</span> ثبت <span class="state">SIGNED</span></button>
-        <button class="entry-tab" role="tab" data-entry="share" aria-selected="false"><span class="num">05</span> اشتراک <span class="state">DONE</span></button>
+      <div class="entry-tabs" role="tablist" aria-label="Case steps" id="entryTabs">
+        <button class="entry-tab" role="tab" data-entry="identity" aria-selected="true"><span class="num">01</span> Identity <span class="state">SEALED</span></button>
+        <button class="entry-tab" role="tab" data-entry="lobby" aria-selected="false"><span class="num">02</span> Lobby <span class="state">SIGNED</span></button>
+        <button class="entry-tab" role="tab" data-entry="contribution" aria-selected="false"><span class="num">03</span> Contribution <span class="state">READY</span></button>
+        <button class="entry-tab" role="tab" data-entry="record" aria-selected="false"><span class="num">04</span> Record <span class="state">SIGNED</span></button>
+        <button class="entry-tab" role="tab" data-entry="share" aria-selected="false"><span class="num">05</span> Share <span class="state">DONE</span></button>
       </div>
 
       <!-- ---------------------------------------------------- ENTRY 01 -->
       <section class="panel" id="panel-identity">
-        <h2>Exhibit 01 — هویت</h2>
-        <p class="lede" dir="rtl">یک کلید خصوصی Ed25519 در همین مرورگر و روی همین دستگاه ساخته می‌شود. کلید خصوصی هرگز به هیچ سروری فرستاده نمی‌شود؛ فقط شناسهٔ عمومی مشتق‌شده از آن (<code>did:key:z6Mk…</code>) عمومی است.</p>
+        <h2>Exhibit 01 — Identity</h2>
+        <p class="lede">An Ed25519 private key is generated right here, in this browser, on this device. It is never sent to any server — only the public identifier derived from it (<code>did:key:z6Mk…</code>) is public.</p>
 
-        <div id="sealBadge" class="seal-badge empty"><span class="fp">هنوز هویتی ساخته نشده</span></div>
+        <div id="sealBadge" class="seal-badge empty"><span class="fp">No identity created yet</span></div>
 
         <section>
           <div class="btn-row" id="identityModeButtons">
-            <button class="btn btn-primary" id="btnCreateIdentity">ساخت هویت جدید</button>
-            <button class="btn btn-ghost" id="btnShowRestore">بازیابی با SECRET_KEY</button>
+            <button class="btn btn-primary" id="btnCreateIdentity">Create new identity</button>
+            <button class="btn btn-ghost" id="btnShowRestore">Restore with SECRET_KEY</button>
           </div>
 
           <div id="restorePanel" class="hidden" style="margin-top:18px;">
             <div class="field">
-              <label for="secretKeyInput">SECRET_KEY (۶۴ کاراکتر هگزادسیمال)</label>
+              <label for="secretKeyInput">SECRET_KEY (64 hex characters)</label>
               <input type="text" id="secretKeyInput" placeholder="a1b2c3..." autocomplete="off" spellcheck="false" />
             </div>
             <div class="btn-row">
-              <button class="btn btn-ghost" id="btnRestoreFromSecret">بازیابی هویت</button>
+              <button class="btn btn-ghost" id="btnRestoreFromSecret">Restore identity</button>
             </div>
           </div>
 
@@ -71,125 +71,125 @@
             <label>PUBLIC_DID</label>
             <div class="data-box" id="didDisplay">—</div>
             <div class="btn-row" style="margin-top:8px;">
-              <button class="btn btn-ghost" id="btnCopyDid">کپی DID</button>
+              <button class="btn btn-ghost" id="btnCopyDid">Copy DID</button>
             </div>
           </div>
 
           <div class="field">
-            <label>SECRET_KEY — تنها راه بازیابی این هویت</label>
+            <label>SECRET_KEY — the only way to recover this identity</label>
             <div class="data-box" id="secretReveal">—</div>
-            <div class="hint" dir="rtl">⚠ این مقدار را همین‌جا، همین حالا، در جایی امن (نه در این چت) بنویسید یا ذخیره کنید. اگر گمش کنید، این هویت برای همیشه غیرقابل‌بازیابی است.</div>
+            <div class="hint">⚠ Write this down or save it somewhere safe right now — not in this chat. If you lose it, this identity can never be recovered.</div>
           </div>
 
           <div class="check" style="margin-top:18px;">
             <input type="checkbox" id="confirmSaved" />
-            <label for="confirmSaved" dir="rtl">SECRET_KEY را در جایی امن نوشتم یا ذخیره کردم.</label>
+            <label for="confirmSaved">I've written down or saved the SECRET_KEY somewhere safe.</label>
           </div>
 
           <div class="btn-row">
-            <button class="btn btn-primary" id="btnGoLobby" disabled>ادامه به لابی ←</button>
-            <button class="btn btn-danger" id="btnLockFromIdentity">قفل کردن هویت</button>
+            <button class="btn btn-primary" id="btnGoLobby" disabled>Continue to Lobby →</button>
+            <button class="btn btn-danger" id="btnLockFromIdentity">Lock identity</button>
           </div>
         </section>
       </section>
 
       <!-- ---------------------------------------------------- ENTRY 02 -->
       <section class="panel hidden" id="panel-lobby">
-        <h2>Exhibit 02 — معرفی در لابی</h2>
-        <p class="lede" dir="rtl">یک پیام امضاشده به روم عمومی <code>lobby</code> بفرستید. این اولین رکورد عمومی زنجیرهٔ شماست و بعد از ارسال، دیگر قابل‌ویرایش نیست.</p>
+        <h2>Exhibit 02 — Introduce yourself in the Lobby</h2>
+        <p class="lede">Send a signed message to the public <code>lobby</code> room. This is the first public record in your chain, and it can't be edited once it's sent.</p>
 
         <section id="lobbyFormSection">
           <div class="field">
-            <label>روم</label>
+            <label>Room</label>
             <div class="data-box">lobby</div>
           </div>
           <div class="field">
-            <label for="lobbyText">متن معرفی (با کلمات خودتان بنویسید)</label>
-            <textarea id="lobbyText" placeholder="مثلا: سلام، یک مشارکت‌کننده جدید برای Technocore هستم و دارم روی [موضوع کار شما] کار می‌کنم."></textarea>
-            <div class="hint" dir="rtl">⚠ سرور پیام‌های تکراری (حتی از افراد مختلف) را رد می‌کند — پس حتماً متن را با زبان خودتان بنویسید، نه یک جملهٔ آماده.</div>
+            <label for="lobbyText">Introduction text (write it in your own words)</label>
+            <textarea id="lobbyText" placeholder="e.g. Hi, I'm a new contributor to Technocore and I'm working on [your topic]."></textarea>
+            <div class="hint">⚠ The server rejects near-duplicate text — even from different people — so write something in your own words, not a canned sentence.</div>
           </div>
           <div class="btn-row">
-            <button class="btn btn-primary" id="btnSignLobby">امضا و ارسال به لابی</button>
+            <button class="btn btn-primary" id="btnSignLobby">Sign &amp; publish to Lobby</button>
           </div>
           <div id="lobbyResult" class="result-box hidden"></div>
         </section>
 
         <section id="lobbyReceiptSection" class="hidden">
           <div class="receipt" id="lobbyReceipt"></div>
-          <div class="receipt-note" id="lobbyReceiptNote" dir="rtl"></div>
+          <div class="receipt-note" id="lobbyReceiptNote"></div>
           <div class="btn-row" style="margin-top:16px;">
-            <button class="btn btn-primary" id="btnGoContribution">ادامه به مشارکت ←</button>
-            <button class="btn btn-ghost" id="btnGoShareEarly">اشتراک‌گذاری همین حالا (اختیاری) ←</button>
+            <button class="btn btn-primary" id="btnGoContribution">Continue to Contribution →</button>
+            <button class="btn btn-ghost" id="btnGoShareEarly">Share now (optional) →</button>
           </div>
         </section>
       </section>
 
       <!-- ---------------------------------------------------- ENTRY 03 -->
       <section class="panel hidden" id="panel-contribution">
-        <h2>Exhibit 03 — ساخت یک مشارکت مفید</h2>
-        <p class="lede" dir="rtl">مشارکت شما لازم نیست کد باشد. هر قالبی که به شناخت یا استفادهٔ بهتر مردم از Technocore کمک کند پذیرفته است.</p>
+        <h2>Exhibit 03 — Build a useful contribution</h2>
+        <p class="lede">Your contribution doesn't have to be code. Anything that helps people understand or use Technocore better counts.</p>
 
         <section>
-          <div class="check"><input type="checkbox" class="usefulCheck" /> <label dir="rtl">Technocore را با کلمات خودم و به‌درستی توضیح می‌دهم.</label></div>
-          <div class="check"><input type="checkbox" class="usefulCheck" /> <label dir="rtl">یک مثال، نمایش یا منبع واقعاً قابل‌استفاده ارائه می‌دهم.</label></div>
-          <div class="check"><input type="checkbox" class="usefulCheck" /> <label dir="rtl">مشخص می‌کنم این مشارکت به چه کسی و چطور کمک می‌کند.</label></div>
-          <div class="check"><input type="checkbox" class="usefulCheck" /> <label dir="rtl">در پست نهایی، @flop_labs و DID عمومی‌ام را ذکر می‌کنم.</label></div>
-          <div class="check"><input type="checkbox" class="usefulCheck" /> <label dir="rtl">محتوا عمومی، قابل‌دسترس، و (در صورت کد/طرح) دارای لایسنس مناسب است.</label></div>
+          <div class="check"><input type="checkbox" class="usefulCheck" /> <label>I explain Technocore accurately, in my own words.</label></div>
+          <div class="check"><input type="checkbox" class="usefulCheck" /> <label>I provide a genuinely usable example, demo, or resource.</label></div>
+          <div class="check"><input type="checkbox" class="usefulCheck" /> <label>I make clear who this contribution helps and how.</label></div>
+          <div class="check"><input type="checkbox" class="usefulCheck" /> <label>I mention @flop_labs and my public DID in the final post.</label></div>
+          <div class="check"><input type="checkbox" class="usefulCheck" /> <label>The content is public, accessible, and (for code/designs) properly licensed.</label></div>
         </section>
 
         <section>
           <div class="field">
-            <label for="contribUrl">آدرس عمومی مشارکت</label>
+            <label for="contribUrl">Public contribution URL</label>
             <input type="url" id="contribUrl" placeholder="https://..." />
           </div>
           <div class="field">
-            <label for="contribDescription">این مشارکت چیست؟</label>
-            <textarea id="contribDescription" placeholder="این مشارکت را با یکی-دو جمله توضیح دهید."></textarea>
+            <label for="contribDescription">What is this contribution?</label>
+            <textarea id="contribDescription" placeholder="Describe this contribution in a sentence or two."></textarea>
           </div>
           <div class="btn-row">
-            <button class="btn btn-primary" id="btnGoRecord" disabled>ادامه به ثبت ←</button>
+            <button class="btn btn-primary" id="btnGoRecord" disabled>Continue to Record →</button>
           </div>
         </section>
       </section>
 
       <!-- ---------------------------------------------------- ENTRY 04 -->
       <section class="panel hidden" id="panel-record">
-        <h2>Exhibit 04 — ثبت مشارکت</h2>
-        <p class="lede" dir="rtl">یک پیام امضاشدهٔ دوم بفرستید که DID شما را به آدرس عمومی مشارکت‌تان پیوند می‌دهد.</p>
+        <h2>Exhibit 04 — Record your contribution</h2>
+        <p class="lede">Send a second signed message that links your DID to your public contribution URL.</p>
 
         <section id="recordFormSection">
           <div class="field">
-            <label for="recordText">متن ثبت (خودکار ساخته شده، قابل ویرایش)</label>
+            <label for="recordText">Record text (auto-generated, editable)</label>
             <textarea id="recordText"></textarea>
           </div>
           <div class="btn-row">
-            <button class="btn btn-primary" id="btnSignRecord">امضا و ارسال ثبت</button>
+            <button class="btn btn-primary" id="btnSignRecord">Sign &amp; publish record</button>
           </div>
           <div id="recordResult" class="result-box hidden"></div>
         </section>
 
         <section id="recordReceiptSection" class="hidden">
           <div class="receipt" id="recordReceipt"></div>
-          <div class="receipt-note" id="recordReceiptNote" dir="rtl"></div>
+          <div class="receipt-note" id="recordReceiptNote"></div>
           <div class="btn-row" style="margin-top:16px;">
-            <button class="btn btn-primary" id="btnGoShare">ادامه به اشتراک‌گذاری ←</button>
+            <button class="btn btn-primary" id="btnGoShare">Continue to Share →</button>
           </div>
         </section>
       </section>
 
       <!-- ---------------------------------------------------- ENTRY 05 -->
       <section class="panel hidden" id="panel-share">
-        <h2>Exhibit 05 — اشتراک‌گذاری</h2>
-        <p class="lede" id="shareLede" dir="rtl">این متن را در X منتشر کنید تا شواهد عمومی مشارکت‌تان دیده شود.</p>
+        <h2>Exhibit 05 — Share</h2>
+        <p class="lede" id="shareLede">Post this on X so the public evidence of your contribution gets seen.</p>
 
         <section>
           <div class="field">
-            <label for="shareText">متن آماده برای X</label>
+            <label for="shareText">Ready-to-post text for X</label>
             <textarea id="shareText" readonly style="min-height:170px;"></textarea>
           </div>
           <div class="btn-row">
-            <button class="btn btn-ghost" id="btnCopyShare">کپی متن</button>
-            <a class="btn btn-primary" id="btnOpenX" href="#" target="_blank" rel="noopener">باز کردن در X</a>
+            <button class="btn btn-ghost" id="btnCopyShare">Copy text</button>
+            <a class="btn btn-primary" id="btnOpenX" href="#" target="_blank" rel="noopener">Open in X</a>
           </div>
         </section>
       </section>
@@ -198,7 +198,7 @@
     <!-- =========================================================== VAULT -->
     <aside class="vault" id="vault">
       <h3>Evidence Vault</h3>
-      <div class="vault-status">SESSION LOCAL ONLY — هیچ سروری این داده را ذخیره نمی‌کند</div>
+      <div class="vault-status">SESSION LOCAL ONLY — nothing here is stored on any server</div>
 
       <div class="vault-row"><span class="k">Identity</span><span class="v" id="vDid">—</span></div>
       <div class="vault-row"><span class="k">Lobby</span><span class="v" id="vLobby">—</span></div>
@@ -206,10 +206,10 @@
       <div class="vault-row"><span class="k">Record</span><span class="v" id="vRecord">—</span></div>
 
       <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-      <div class="progress-label" id="progressLabel">۰٪ تکمیل</div>
+      <div class="progress-label" id="progressLabel">0% complete</div>
 
       <div class="btn-row">
-        <button class="btn btn-danger" id="btnLockVault">🔒 قفل کردن Vault</button>
+        <button class="btn btn-danger" id="btnLockVault">🔒 Lock Vault</button>
       </div>
     </aside>
 
@@ -217,9 +217,9 @@
 </div>
 
 <footer class="site-footer">
-  <div class="wrap" dir="rtl">
-    <p>این ابزار مستقل و جامعه‌محور است و محصول رسمی Flop Labs نیست. تکمیل این مسیر <strong>تخصیص ایردراپ را تضمین نمی‌کند</strong>؛ صرفاً یک زنجیرهٔ شواهد عمومی و قابل‌راستی‌آزمایی می‌سازد.</p>
-    <p>منطق پروتکل برگرفته از <a href="https://github.com/zunmax/technocore-did-starter" target="_blank" rel="noopener">zunmax/technocore-did-starter</a> (MIT). کلید خصوصی شما هرگز از مرورگرتان خارج نمی‌شود.</p>
+  <div class="wrap">
+    <p>This is an independent, community-built tool and not an official product of Flop Labs. Completing this flow <strong>does not guarantee any airdrop allocation</strong> — it only produces a public, verifiable trail of a contribution.</p>
+    <p>Protocol logic adapted from <a href="https://github.com/zunmax/technocore-did-starter" target="_blank" rel="noopener">zunmax/technocore-did-starter</a> (MIT). Your private key never leaves your browser.</p>
   </div>
 </footer>
 

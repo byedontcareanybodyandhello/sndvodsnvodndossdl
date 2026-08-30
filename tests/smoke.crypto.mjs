@@ -53,6 +53,32 @@ async function main() {
   }
   console.assert(failed, "tampered proof should fail verification");
 
+  // 8. Nonces must stay within JavaScript's safe integer range so they
+  // round-trip losslessly through any standard JSON parser (a ~19-digit
+  // nanosecond-scale nonce previously caused real false-mismatch failures
+  // against the live server — see README §4a).
+  for (let i = 0; i < 5; i++) {
+    const n = C.nextNonce();
+    console.assert(
+      Number.isSafeInteger(Number(n)),
+      `nonce ${n} exceeds Number.MAX_SAFE_INTEGER and would round-trip corrupted through JSON`
+    );
+  }
+  console.log("nonce safe-integer check OK");
+
+  // Simulate exactly what broke live: a server echoing the nonce back as a
+  // bare JSON number (not a string), round-tripped through the browser's
+  // own JSON.parse. With the old nanosecond-scale nonce this silently
+  // corrupted the value; with the millisecond-scale nonce it must not.
+  const n2 = C.nextNonce();
+  const simulatedServerJson = `{"nonce": ${n2}}`;
+  const roundTripped = JSON.parse(simulatedServerJson).nonce;
+  console.assert(
+    String(roundTripped) === n2,
+    `nonce ${n2} was corrupted to ${roundTripped} after a JSON number round trip`
+  );
+  console.log("JSON-number round-trip fidelity OK:", n2, "->", roundTripped);
+
   console.log("\nALL SMOKE TESTS PASSED");
 }
 

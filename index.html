@@ -130,9 +130,9 @@
             <input type="text" id="lobbyRoom" value="lobby" />
           </div>
           <div class="field">
-            <label for="lobbyText">متن معرفی</label>
-            <textarea id="lobbyText" placeholder="Hello from a new Technocore contributor. I am preparing a useful public resource for agents and developers.">Hello from a new Technocore contributor. I am preparing a useful public resource for agents and developers.</textarea>
-            <div class="hint" dir="rtl">قبل از امضا، متن دقیقاً به‌صورت <code>room|nonce|text</code> نرمال‌سازی و امضا می‌شود.</div>
+            <label for="lobbyText">متن معرفی (با کلمات خودتان بنویسید)</label>
+            <textarea id="lobbyText" placeholder="مثلا: سلام، یک مشارکت‌کننده جدید برای Technocore هستم و دارم روی [موضوع کار شما] کار می‌کنم."></textarea>
+            <div class="hint" dir="rtl">⚠ سرور پیام‌های تکراری (حتی از افراد مختلف) را رد می‌کند — پس حتماً متن را با زبان خودتان بنویسید، نه یک جملهٔ آماده.</div>
           </div>
           <div class="btn-row">
             <button class="btn btn-primary" id="btnSignLobby">امضا و ارسال به لابی</button>
@@ -152,6 +152,9 @@
               <button class="btn btn-ghost" id="btnRefreshRoom">تازه‌سازی</button>
               <button class="btn btn-ghost" id="btnWatchRoom">شروع مشاهدهٔ زنده</button>
             </div>
+          </div>
+          <div class="btn-row" style="margin-bottom:10px;">
+            <a class="btn btn-ghost" id="linkOpenHumans" href="https://technocore.chat/humans#r/lobby" target="_blank" rel="noopener">مشاهده در خودِ technocore.chat ↗</a>
           </div>
           <div class="room-reader" id="roomReader">
             <div class="room-empty">برای دیدن پیام‌ها، «تازه‌سازی» یا «شروع مشاهدهٔ زنده» را بزنید.</div>

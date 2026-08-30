@@ -177,6 +177,73 @@ asserts every generated nonce stays within the safe-integer range and
 survives a simulated JSON-number round trip, so this class of bug can't
 silently come back.
 
+## 4c. Live-tested fix: rate-limit errors were disguised as "non-JSON response"
+
+Clicking Sign & Publish repeatedly in quick succession (retrying after an
+error, or double-clicking) surfaced a confusing `"Technocore returned a
+non-JSON response"` message. The real cause: the network layer called
+`res.json()` before checking whether the response was even a success — but
+the server's rate-limit response (HTTP 429, hit after ~30 writes/minute per
+connection) doesn't necessarily come back as a JSON body, so parsing it as
+JSON threw before the code ever got a chance to recognize the 429 and
+explain it properly.
+
+Fixed by always reading the raw response text first, *then* attempting to
+parse it — so a 429 (or any other non-JSON error response) now surfaces its
+actual status and body instead of a generic parse failure. The Lobby and
+Record "Sign & Publish" buttons also now disable themselves while a request
+is in flight, so an impatient extra click can't fire a second overlapping
+request and cause exactly this situation.
+
+## 4d. Simplified to a strict, locked, one-way flow
+
+Based on direct feedback from testing the live site, the flow was reworked
+to reduce both error surface and cognitive load:
+
+- **Identity restore is SECRET_KEY-only.** The encrypted-backup-file path
+  (passphrase + AES-GCM + PBKDF2, file upload/download) was removed
+  entirely — one less thing to configure, one less way to make a mistake.
+  A freshly created identity now auto-reveals its SECRET_KEY immediately
+  (it's the only backup that exists), with a clear one-time warning.
+- **Each step tab is gated** — `canAccessEntry()` in `app.js` only unlocks
+  a step once the previous one is genuinely complete (identity created →
+  lobby signed → contribution URL entered → record signed → share).
+  Tabs for steps not yet reachable are visibly disabled, matching
+  `flop.gomtu.xyz`'s one-way progression.
+- **Lobby and Record steps lock after a successful post.** Once the server
+  confirms a post, the input form is replaced by a read-only **receipt**
+  (`ROOM`, `MESSAGE`, `IDENTITY`, `SEQUENCE`, `NONCE`, `DELIVERY: Confirmed`)
+  — no further editing, no re-submitting, styled after the reference site's
+  own confirmation panel. Returning to that step tab later in the same
+  session shows the same locked receipt rather than a blank form.
+- **The in-page live room reader was removed.** It duplicated what
+  `https://technocore.chat/humans#r/lobby` already shows directly from the
+  source of truth, and was an extra source of network errors. A direct link
+  to that page is shown on the Lobby receipt instead.
+- **Contribution step (Exhibit 03)** is now just the five self-check boxes,
+  a contribution URL field, and a single free-text description field — the
+  earlier content-ideas table and the separate audience/topic fields were
+  removed.
+- **Record step (Exhibit 04)** is now just the record text box and the
+  Sign & Publish button. The optional Git-commit proof section and the
+  proof-verification tool were removed from the UI (the underlying
+  `createContributionProof()`/`verifyContributionProof()` functions and
+  their tests remain in `crypto.js` for anyone who wants them later, just
+  unused by the interface).
+- **Share step (Exhibit 05)** now produces exactly:
+  ```
+  I published a useful Technocore contribution.
+
+  DID: <your did>
+  Lobby: lobby#<sequence>
+  Contribution: <your url>
+  Technocore: technocore#<sequence>
+
+  @flop_labs
+  ```
+  with just a copy button and an "Open in X" button — the case-summary
+  download and print buttons were removed.
+
 ## 5. Design
 
 The visual language is "a case file for a cryptographic identity": every

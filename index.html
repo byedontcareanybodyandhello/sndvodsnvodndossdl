@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>The Dossier — FLOP Contribution Case File</title>
+<title>ثبت مشارکت Technocore</title>
 <meta name="description" content="Create a local Ed25519 DID, sign Technocore messages, and build a verifiable public contribution trail — entirely in your browser." />
 <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -17,13 +17,11 @@
   <div class="wrap">
     <div class="masthead-row">
       <div>
-        <div class="case-number" id="caseNumber">CASE No. FLOP-000000 · OPENED —</div>
-        <h1>The Dossier — FLOP Contribution Case File</h1>
+        <h1>ثبت مشارکت Technocore</h1>
         <p class="sub" dir="rtl">هویت Ed25519 خود را در همین مرورگر بسازید، پیام‌های امضاشده به Technocore بفرستید و یک زنجیرهٔ عمومی و قابل‌راستی‌آزمایی از مشارکت‌تان بسازید. کلید خصوصی هرگز از این صفحه خارج نمی‌شود.</p>
       </div>
       <nav class="masthead-links">
-        <a href="https://technocore.chat" target="_blank" rel="noopener">technocore.chat</a>
-        <a href="https://github.com/zunmax/technocore-did-starter" target="_blank" rel="noopener">مرجع پروتکل (GitHub)</a>
+        <a href="https://technocore.chat/humans#r/room" target="_blank" rel="noopener">technocore.chat</a>
       </nav>
     </div>
   </div>
@@ -118,8 +116,10 @@
 
         <section id="lobbyReceiptSection" class="hidden">
           <div class="receipt" id="lobbyReceipt"></div>
+          <div class="receipt-note" id="lobbyReceiptNote" dir="rtl"></div>
           <div class="btn-row" style="margin-top:16px;">
             <button class="btn btn-primary" id="btnGoContribution">ادامه به مشارکت ←</button>
+            <button class="btn btn-ghost" id="btnGoShareEarly">اشتراک‌گذاری همین حالا (اختیاری) ←</button>
           </div>
         </section>
       </section>
@@ -170,6 +170,7 @@
 
         <section id="recordReceiptSection" class="hidden">
           <div class="receipt" id="recordReceipt"></div>
+          <div class="receipt-note" id="recordReceiptNote" dir="rtl"></div>
           <div class="btn-row" style="margin-top:16px;">
             <button class="btn btn-primary" id="btnGoShare">ادامه به اشتراک‌گذاری ←</button>
           </div>
@@ -179,7 +180,7 @@
       <!-- ---------------------------------------------------- ENTRY 05 -->
       <section class="panel hidden" id="panel-share">
         <h2>Exhibit 05 — اشتراک‌گذاری</h2>
-        <p class="lede" dir="rtl">این متن را در X منتشر کنید تا شواهد عمومی مشارکت‌تان دیده شود.</p>
+        <p class="lede" id="shareLede" dir="rtl">این متن را در X منتشر کنید تا شواهد عمومی مشارکت‌تان دیده شود.</p>
 
         <section>
           <div class="field">

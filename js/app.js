@@ -12,6 +12,8 @@ import { unlockFromSecretKeyHex, revealSecretKeyHex } from "./vault.js";
 /* ------------------------------------------------------------------ state */
 
 const RECORD_ROOM = "technocore";
+const LOBBY_ROOM = "lobby";
+const HUMANS_BASE = "https://technocore.chat/humans#r/";
 
 const state = {
   identity: null, // { privateKey, publicKeyRaw, did }
@@ -22,13 +24,6 @@ const state = {
 };
 
 const $ = (id) => document.getElementById(id);
-
-/* ------------------------------------------------------------- masthead */
-
-(function initMasthead() {
-  const n = Math.floor(100000 + Math.random() * 900000);
-  $("caseNumber").textContent = `CASE No. FLOP-${n} · OPENED ${new Date().toISOString().slice(0, 10)}`;
-})();
 
 /* --------------------------------------------------------------- helpers */
 
@@ -76,6 +71,16 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+/** A small "find this on the live server" note shown under a locked receipt. */
+function humansLookupNoteHtml(room, seq) {
+  const url = HUMANS_BASE + room;
+  return (
+    `برای دیدن این پیام روی سرور واقعی، به <a href="${url}" target="_blank" rel="noopener">technocore.chat/humans#r/${room}</a> بروید ` +
+    `و به‌دنبال شمارهٔ <strong>#${seq}</strong> یا DID خودتان در فهرست روم «${room}» بگردید — این عدد نام روم نیست، جای پیام شما ` +
+    `<em>داخل</em> روم «${room}» است.`
+  );
+}
+
 /* --------------------------------------------------------- entry / tabs */
 
 const ENTRIES = ["identity", "lobby", "contribution", "record", "share"];
@@ -91,7 +96,11 @@ function canAccessEntry(name) {
     case "record":
       return !!state.contribution.url;
     case "share":
-      return !!state.record.seq;
+      // Reachable as soon as the lobby post is confirmed, so the person can
+      // announce their new identity on X right away — it doesn't require
+      // the contribution/record steps to be finished first. composeShareText()
+      // adjusts the actual post text depending on how far they've gotten.
+      return !!state.lobby.seq;
     default:
       return false;
   }
@@ -217,13 +226,14 @@ function renderLobbyPanel() {
   $("lobbyReceiptSection").classList.toggle("hidden", !published);
   if (published) {
     $("lobbyReceipt").innerHTML = receiptHtml([
-      ["ROOM", "lobby"],
+      ["ROOM", LOBBY_ROOM],
       ["MESSAGE", state.lobby.text],
       ["IDENTITY", shortDid(state.identity.did)],
       ["SEQUENCE", "#" + state.lobby.seq],
       ["NONCE", state.lobby.nonce],
       ["DELIVERY", "Confirmed", "status"],
     ]);
+    $("lobbyReceiptNote").innerHTML = humansLookupNoteHtml(LOBBY_ROOM, state.lobby.seq);
   }
 }
 
@@ -235,9 +245,9 @@ $("btnSignLobby").addEventListener("click", async () => {
   btn.textContent = "در حال ارسال…";
   hideResult("lobbyResult");
   try {
-    const response = await postSignedMessage(state.identity, "lobby", text);
+    const response = await postSignedMessage(state.identity, LOBBY_ROOM, text);
     state.lobby = {
-      room: "lobby",
+      room: LOBBY_ROOM,
       seq: response.posted.seq,
       text: response.posted.text,
       nonce: response.posted.nonce,
@@ -262,6 +272,7 @@ function requireIdentity(resultElId) {
 }
 
 $("btnGoContribution").addEventListener("click", () => setEntry("contribution"));
+$("btnGoShareEarly").addEventListener("click", () => setEntry("share"));
 
 /* ============================================================ ENTRY 03 */
 
@@ -307,6 +318,7 @@ function renderRecordPanel() {
       ["NONCE", state.record.nonce],
       ["DELIVERY", "Confirmed", "status"],
     ]);
+    $("recordReceiptNote").innerHTML = humansLookupNoteHtml(RECORD_ROOM, state.record.seq);
   } else {
     composeRecordText();
   }
@@ -344,10 +356,14 @@ $("btnGoShare").addEventListener("click", () => setEntry("share"));
 
 function composeShareText() {
   const did = state.identity?.did || "YOUR_PUBLIC_DID";
-  const lobbyPart = state.lobby.seq ? `lobby#${state.lobby.seq}` : "—";
-  const contribPart = state.contribution.url || "—";
-  const recordPart = state.record.seq ? `${RECORD_ROOM}#${state.record.seq}` : "—";
-  const text = `I published a useful Technocore contribution.
+  const lobbyPart = state.lobby.seq ? `${LOBBY_ROOM}#${state.lobby.seq}` : "—";
+  const complete = !!state.record.seq;
+
+  let text;
+  if (complete) {
+    const contribPart = state.contribution.url || "—";
+    const recordPart = `${RECORD_ROOM}#${state.record.seq}`;
+    text = `I published a useful Technocore contribution.
 
 DID: ${did}
 Lobby: ${lobbyPart}
@@ -355,6 +371,17 @@ Contribution: ${contribPart}
 Technocore: ${recordPart}
 
 @flop_labs`;
+    $("shareLede").textContent = "این متن را در X منتشر کنید تا شواهد عمومی مشارکت‌تان دیده شود.";
+  } else {
+    text = `I just created a signed, public Technocore identity and posted my first entry.
+
+DID: ${did}
+Lobby: ${lobbyPart}
+
+@flop_labs`;
+    $("shareLede").textContent =
+      "هنوز مراحل «مشارکت» و «ثبت» را تمام نکرده‌اید — همین حالا می‌توانید عضویت خود را اعلام کنید و بعداً برای انتشار نسخهٔ کامل به همین‌جا برگردید.";
+  }
   $("shareText").value = text;
   $("btnOpenX").href = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(text);
 }

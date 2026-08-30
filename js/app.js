@@ -239,7 +239,9 @@ $("btnSignLobby").addEventListener("click", async () => {
     state.lobby = { room, seq: response.posted.seq, text: response.posted.text };
     markTabDone("lobby");
     updateVault();
-    showResult("lobbyResult", `ثبت شد. room=${room} seq=${response.posted.seq}\ntext: ${response.posted.text}`);
+    $("watchRoomInput").value = room;
+    $("linkOpenHumans").href = `https://technocore.chat/humans#r/${encodeURIComponent(room)}`;
+    showResult("lobbyResult", `ثبت شد. room=${room} seq=${response.posted.seq}\ntext: ${response.posted.text}\n\nبرای دیدن آن روی «مشاهده در خودِ technocore.chat» یا «تازه‌سازی» بزنید.`);
   } catch (err) {
     showResult("lobbyResult", `خطا: ${err.message}`, true);
   }
@@ -278,6 +280,7 @@ function escapeHtml(s) {
 
 $("btnRefreshRoom").addEventListener("click", async () => {
   const room = $("watchRoomInput").value.trim();
+  $("linkOpenHumans").href = `https://technocore.chat/humans#r/${encodeURIComponent(room)}`;
   try {
     const response = await readRoom(room, { limit: 30 });
     state.roomMessages = response.messages;

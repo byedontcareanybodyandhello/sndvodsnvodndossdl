@@ -193,10 +193,18 @@ export function seedFromHex(hex) {
 
 const INVISIBLE_CATEGORY_RE = /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/gu;
 
-/** Mirrors normalize_message() */
+/**
+ * Mirrors normalize_message(). Also applies Unicode NFC normalization: the
+ * live Technocore server signs and stores whatever code points it is sent
+ * without normalizing them itself (confirmed against its published manual),
+ * so two visually-identical messages typed with different Unicode
+ * decompositions would otherwise sign as different bytes. Normalizing here
+ * keeps this client's output predictable and matches the "sign and send the
+ * same form" guidance in that manual.
+ */
 export function normalizeMessage(text) {
   if (typeof text !== "string") throw new ProtocolError("message text must be a string");
-  const normalized = text.replace(INVISIBLE_CATEGORY_RE, " ").trim();
+  const normalized = text.replace(INVISIBLE_CATEGORY_RE, " ").trim().normalize("NFC");
   if (!normalized) throw new ProtocolError("message has no visible text after normalization");
   if (normalized.length > MAX_MESSAGE_CHARS) {
     throw new ProtocolError(

@@ -108,15 +108,16 @@ export async function postSignedMessage(identity, room, text, { nonce, baseUrl =
   if (!posted || typeof posted !== "object") {
     throw new NetworkError("Technocore accepted the request without returning a posted record");
   }
-  const matchingNonce = String(posted.nonce) === String(selectedNonce);
-  const matchingRecord =
-    posted.from === identity.did &&
-    posted.text === normalized &&
-    matchingNonce &&
-    Number.isInteger(posted.seq) &&
-    posted.seq > 0;
-  if (!matchingRecord) {
-    throw new NetworkError("Technocore returned a posted record that does not match this identity");
+  const problems = [];
+  if (posted.from !== identity.did) problems.push("did");
+  if (posted.text !== normalized) problems.push("text");
+  if (String(posted.nonce) !== String(selectedNonce)) problems.push("nonce");
+  if (!Number.isInteger(posted.seq) || posted.seq <= 0) problems.push("seq");
+  if (problems.length) {
+    throw new NetworkError(
+      `Technocore's posted record didn't match on: ${problems.join(", ")}. ` +
+        `Sent nonce ${selectedNonce}, got back ${JSON.stringify(posted.nonce)}.`
+    );
   }
   if (!response.messages.some((m) => m.seq === posted.seq)) {
     throw new NetworkError("Technocore response did not include the newly posted sequence");

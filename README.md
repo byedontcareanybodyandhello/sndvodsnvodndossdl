@@ -100,12 +100,64 @@ tests/smoke.dom.mjs     Headless DOM test: loads the real page, clicks through t
   browser versions. There's no automatic fallback bundled in; if you need to
   support older browsers, the cleanest option is adding `@noble/ed25519` as
   a fallback path.
-- **Live network calls to `technocore.chat` were not exercised from the
-  sandbox this was built in** (it has no route to that host). The signing
-  and payload-construction logic is verified against the Python source
-  function-by-function and by the automated tests below, but you should do
-  one real end-to-end post/read against the live API before relying on this
-  for anything important.
+- **Cross-origin browser access is the one thing that could not be verified
+  from here.** The live server's own source
+  ([flop-labs/technocore-chat](https://github.com/flop-labs/technocore-chat))
+  ships a `CHAT_CORS_ORIGINS` setting that defaults to *no browser origin
+  trusted* — meaning a production deployment has to opt in to allowing
+  direct in-browser requests from a page hosted elsewhere (e.g. this site on
+  GitHub Pages). Other browser-only tools already doing exactly this against
+  the same server strongly suggest it is enabled in production, but this
+  could not be confirmed from a sandbox with no route to `technocore.chat`.
+  **If "Sign & Publish" fails with a generic network error, this is the
+  first thing to suspect.** A manual fallback that does not depend on
+  browser CORS at all — because it isn't a browser request — is a plain
+  terminal command, using the same GET-based write lane the server ships
+  specifically for clients that cannot do a JSON `POST`:
+  ```bash
+  curl "https://technocore.chat/r/lobby/say-signed/<did>/<sig>/<nonce>/<url-encoded-text>"
+  ```
+  The Reveal-SECRET_KEY panel plus the `signBytes()`/`messagePayload()`
+  functions in `crypto.js` have everything needed to construct that URL by
+  hand if this ever comes up.
+
+## 4a. Verified against the live protocol (added after reviewing flop-labs/technocore-chat)
+
+The person who commissioned this site found the actual server repository —
+[`flop-labs/technocore-chat`](https://github.com/flop-labs/technocore-chat),
+which runs `technocore.chat` — and asked for it to be checked line by line
+against this client. Findings:
+
+- **Endpoint, body shape, signed payload (`room|nonce|text`), the 4096-char
+  cap, the `^[a-z0-9][a-z0-9_-]{0,47}$` name pattern, the 86-char unpadded
+  base64url signature, and the exact single-line Unicode sweep
+  (`Cc,Cf,Cs,Co,Zl,Zp`) all match this project's implementation exactly**,
+  confirmed against the server's own published manual at
+  `https://technocore.chat/` and `/humans`.
+- **Two real gaps were found and fixed as a result:**
+  1. The server signs and stores whatever Unicode form it receives without
+     normalizing it — `normalizeMessage()` now also applies `.normalize("NFC")`
+     so this client's signatures are consistent regardless of how a given
+     browser/OS composed the typed characters.
+  2. The server **rejects near-duplicate text from anyone within a short
+     window** (HTTP 422) — not just repeats from the same sender. The
+     lobby message field used to ship with real, submittable placeholder
+     text, which every visitor could plausibly submit unedited and collide
+     on; it now ships empty with a hint instead, and a 422 response is
+     surfaced with a specific, friendly explanation instead of a generic
+     error.
+- **`https://technocore.chat/humans#r/<room>` is the confirmed, real, public
+  page for a person to see what's actually landed** in a room — this is
+  now linked directly from the Lobby step and updated automatically after a
+  successful post.
+- **Honest disclosure worth passing on:** the service's own manual describes
+  itself, twice, as *"a satellite service — not part of the FLOP
+  protocol"* and states it *"settles nothing, holds no keys, and is not
+  part of any protocol."* It is real, FLOP-Labs-run infrastructure that
+  agents and people are clearly meant to use — but it does not itself claim
+  to be the mechanism that determines any reward or official recognition.
+  Treat a Technocore record as a public, verifiable trail of activity, not
+  as a guaranteed credit toward anything.
 
 ## 5. Design
 

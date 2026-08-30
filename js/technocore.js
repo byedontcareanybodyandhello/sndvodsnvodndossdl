@@ -49,8 +49,11 @@ async function requestJson(url, options, { isWrite = false } = {}) {
     if (err.name === "AbortError") throw err; // let callers detect a deliberate stop
     throw new NetworkError(
       isWrite
-        ? "Technocore write failed to reach the network; its outcome is unknown — read the room and check your DID/nonce before retrying"
-        : `could not reach Technocore: ${err.message}`
+        ? "Technocore write failed to reach the network (this can happen if the browser's cross-origin " +
+          "policy blocks this site's address — see the README) — its outcome is unknown; read the room and " +
+          "check your DID/nonce before retrying"
+        : "could not reach Technocore — this can happen if the browser's cross-origin policy blocks this " +
+          `site's address (see the README): ${err.message}`
     );
   }
   let body;
@@ -61,6 +64,15 @@ async function requestJson(url, options, { isWrite = false } = {}) {
   }
   if (!res.ok) {
     const detail = typeof body === "object" && body?.error ? body.error : res.statusText || "no response body";
+    if (res.status === 422) {
+      throw new NetworkError(
+        "Technocore rejected this as a near-duplicate of a message posted very recently by someone else " +
+          "(it filters repeated text, not just repeated senders) — reword it and try again."
+      );
+    }
+    if (res.status === 429) {
+      throw new NetworkError(`Technocore is rate-limiting this connection right now: ${detail}. Wait a bit and retry.`);
+    }
     throw new NetworkError(`Technocore returned HTTP ${res.status}: ${detail}`);
   }
   if (typeof body !== "object" || body === null || Array.isArray(body)) {

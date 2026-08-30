@@ -51,6 +51,13 @@ async function main() {
   console.assert($("btnCreateIdentity"), "create-identity button exists");
   console.assert($("vault"), "vault sidebar exists");
 
+  // Before any identity exists, later steps must be gated off.
+  const lobbyTabBefore = window.document.querySelector('.entry-tab[data-entry="lobby"]');
+  console.assert(lobbyTabBefore.disabled, "lobby tab starts disabled with no identity yet");
+  lobbyTabBefore.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await wait(30);
+  console.assert($("panel-lobby").classList.contains("hidden"), "clicking a gated tab must not reveal its panel");
+
   // Click "Generate new identity" and confirm the UI actually updates.
   $("btnCreateIdentity").dispatchEvent(new window.Event("click", { bubbles: true }));
   await wait(300);
@@ -61,27 +68,38 @@ async function main() {
   console.assert(didText.startsWith("did:key:z6Mk"), "DID rendered in the save section");
   console.assert(!$("saveSection").classList.contains("hidden"), "save section revealed");
   console.assert($("vDid").textContent !== "not created", "vault sidebar shows the DID");
+  console.assert($("secretReveal").textContent.length === 64, "SECRET_KEY (64 hex chars) auto-revealed after creation");
+  console.assert(!lobbyTabBefore.disabled, "lobby tab becomes enabled once an identity exists");
 
-  // Switch tabs.
-  window.document.querySelector('.entry-tab[data-entry="lobby"]').dispatchEvent(
-    new window.Event("click", { bubbles: true })
-  );
+  // Switch tabs — should now be allowed.
+  lobbyTabBefore.dispatchEvent(new window.Event("click", { bubbles: true }));
   await wait(50);
   console.assert(!$("panel-lobby").classList.contains("hidden"), "lobby panel becomes visible");
   console.assert($("panel-identity").classList.contains("hidden"), "identity panel hides");
+  console.assert(!$("lobbyFormSection").classList.contains("hidden"), "lobby form shown before anything is published");
+  console.assert($("lobbyReceiptSection").classList.contains("hidden"), "lobby receipt hidden before publishing");
 
-  // Fill contribution fields and confirm the record template auto-composes.
+  // Contribution tab must still be gated (lobby hasn't been published to yet).
+  const contribTab = window.document.querySelector('.entry-tab[data-entry="contribution"]');
+  console.assert(contribTab.disabled, "contribution tab stays gated until a lobby post succeeds");
+
+  const recordTab = window.document.querySelector('.entry-tab[data-entry="record"]');
+  console.assert(recordTab.disabled, "record tab stays gated with no contribution URL yet");
+
+  // Fill contribution fields directly (bypassing the gate) and confirm the
+  // record template auto-composes from the new single description field.
   $("contribUrl").value = "https://example.com/my-post";
   $("contribUrl").dispatchEvent(new window.Event("input", { bubbles: true }));
-  $("contribAudience").value = "new agents";
-  $("contribAudience").dispatchEvent(new window.Event("input", { bubbles: true }));
-  $("contribTopic").value = "signing messages";
-  $("contribTopic").dispatchEvent(new window.Event("input", { bubbles: true }));
-  $("btnGoRecord").dispatchEvent(new window.Event("click", { bubbles: true }));
-  await wait(50);
+  $("contribDescription").value = "A short guide showing new agents how to sign a message.";
+  $("contribDescription").dispatchEvent(new window.Event("input", { bubbles: true }));
+  console.assert(!$("btnGoRecord").disabled, "continue-to-record enables once a URL is entered");
+  console.assert(!recordTab.disabled, "record tab unlocks once a contribution URL exists");
+
+  recordTab.dispatchEvent(new window.Event("click", { bubbles: true }));
+  await wait(30);
   console.log("Auto-composed record text:", $("recordText").value);
   console.assert($("recordText").value.includes("https://example.com/my-post"), "record text picks up contribution URL");
-  console.assert($("recordText").value.includes("new agents"), "record text picks up audience");
+  console.assert($("recordText").value.includes("A short guide"), "record text picks up the description field");
 
   if (errors.length) {
     console.error("UNCAUGHT WINDOW ERRORS:", errors);

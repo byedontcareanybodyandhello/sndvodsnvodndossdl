@@ -159,6 +159,24 @@ against this client. Findings:
   Treat a Technocore record as a public, verifiable trail of activity, not
   as a guaranteed credit toward anything.
 
+## 4b. Live-tested fix: nonce size was corrupting real posts
+
+After deployment, a real post attempt against the live server failed with
+alternating errors — a generic network failure, and *"posted record does
+not match this identity."* The cause: `nextNonce()` generated a
+nanosecond-scale value (~19 digits), far past `Number.MAX_SAFE_INTEGER`
+(2^53, ~16 digits). JSON has no separate integer type, so when the server
+echoed that nonce back as a bare JSON number, the browser's own
+`response.json()` silently rounded it to the nearest representable double —
+a real post landing on the server, misreported as a mismatch on this end.
+
+Fixed by switching to a millisecond-clock nonce (~13 digits, always exact in
+a JS double), which the server's own manual explicitly names as valid
+("a counter or a millisecond clock both work"). `tests/smoke.crypto.mjs` now
+asserts every generated nonce stays within the safe-integer range and
+survives a simulated JSON-number round trip, so this class of bug can't
+silently come back.
+
 ## 5. Design
 
 The visual language is "a case file for a cryptographic identity": every

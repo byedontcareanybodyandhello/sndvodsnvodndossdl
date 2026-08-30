@@ -1,8 +1,5 @@
 /**
- * app.js — UI controller for The Dossier.
- * Pure client-side. No data leaves the browser except the public fields
- * (did, sig, nonce, text) sent directly to Technocore, exactly as the CLI
- * this mirrors (technocore_agent.py) does.
+ * app.js — UI controller: wires the crypto and network modules to the DOM.
  */
 
 import * as C from "./crypto.js";
@@ -48,10 +45,10 @@ function attachCopy(button, getText) {
     try {
       await navigator.clipboard.writeText(getText());
       const old = button.textContent;
-      button.textContent = "کپی شد ✓";
+      button.textContent = "Copied ✓";
       setTimeout(() => (button.textContent = old), 1400);
     } catch {
-      /* clipboard may be unavailable; silently ignore */
+      /* clipboard may be unavailable; ignore */
     }
   });
 }
@@ -71,13 +68,13 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-/** A small "find this on the live server" note shown under a locked receipt. */
+/** Explains where to find a published message on the live server. */
 function humansLookupNoteHtml(room, seq) {
   const url = HUMANS_BASE + room;
   return (
-    `برای دیدن این پیام روی سرور واقعی، به <a href="${url}" target="_blank" rel="noopener">technocore.chat/humans#r/${room}</a> بروید ` +
-    `و به‌دنبال شمارهٔ <strong>#${seq}</strong> یا DID خودتان در فهرست روم «${room}» بگردید — این عدد نام روم نیست، جای پیام شما ` +
-    `<em>داخل</em> روم «${room}» است.`
+    `To see this message on the live server, go to <a href="${url}" target="_blank" rel="noopener">technocore.chat/humans#r/${room}</a> ` +
+    `and look for <strong>#${seq}</strong> or your DID in the "${room}" room's list — that number is not a room name, ` +
+    `it's where your message sits <em>inside</em> the "${room}" room.`
   );
 }
 
@@ -97,9 +94,8 @@ function canAccessEntry(name) {
       return !!state.contribution.url;
     case "share":
       // Reachable as soon as the lobby post is confirmed, so the person can
-      // announce their new identity on X right away — it doesn't require
-      // the contribution/record steps to be finished first. composeShareText()
-      // adjusts the actual post text depending on how far they've gotten.
+      // announce their new identity on X right away. composeShareText()
+      // adjusts the post text depending on how far they've gotten.
       return !!state.lobby.seq;
     default:
       return false;
@@ -150,7 +146,7 @@ function updateVault() {
   const done = steps.filter(Boolean).length;
   const pct = Math.round((done / steps.length) * 100);
   $("progressFill").style.width = pct + "%";
-  $("progressLabel").textContent = `${pct}٪ تکمیل (${done}/${steps.length})`;
+  $("progressLabel").textContent = `${pct}% complete (${done}/${steps.length})`;
 
   updateTabGating();
 }
@@ -159,7 +155,7 @@ function renderSeal() {
   const badge = $("sealBadge");
   if (!state.identity) {
     badge.className = "seal-badge empty";
-    badge.innerHTML = `<span class="fp">هنوز هویتی ساخته نشده</span>`;
+    badge.innerHTML = `<span class="fp">No identity created yet</span>`;
     return;
   }
   badge.className = "seal-badge";
@@ -171,10 +167,10 @@ function renderSeal() {
 $("btnCreateIdentity").addEventListener("click", async () => {
   try {
     state.identity = await C.generateIdentity();
-    await onIdentityReady({ revealSecret: true });
-    showResult("identityResult", `هویت جدید ساخته شد.\nPUBLIC_DID: ${state.identity.did}`);
+    await onIdentityReady();
+    showResult("identityResult", `New identity created.\nPUBLIC_DID: ${state.identity.did}`);
   } catch (err) {
-    showResult("identityResult", `خطا: ${err.message}`, true);
+    showResult("identityResult", `Error: ${err.message}`, true);
   }
 });
 
@@ -186,14 +182,14 @@ $("btnRestoreFromSecret").addEventListener("click", async () => {
   try {
     const hex = $("secretKeyInput").value;
     state.identity = await unlockFromSecretKeyHex(hex);
-    await onIdentityReady({ revealSecret: false });
-    showResult("identityResult", `هویت با موفقیت بازیابی شد.\nPUBLIC_DID: ${state.identity.did}`);
+    await onIdentityReady();
+    showResult("identityResult", `Identity restored successfully.\nPUBLIC_DID: ${state.identity.did}`);
   } catch (err) {
-    showResult("identityResult", `خطا: ${err.message}`, true);
+    showResult("identityResult", `Error: ${err.message}`, true);
   }
 });
 
-async function onIdentityReady({ revealSecret }) {
+async function onIdentityReady() {
   renderSeal();
   $("didDisplay").textContent = state.identity.did;
   $("saveSection").classList.remove("hidden");
@@ -214,7 +210,7 @@ $("btnLockFromIdentity").addEventListener("click", lockVault);
 $("btnLockVault").addEventListener("click", lockVault);
 
 function lockVault() {
-  if (!confirm("هویت و تمام داده‌های محلی این نشست پاک می‌شود و صفحه از نو بارگذاری می‌شود. ادامه می‌دهید؟")) return;
+  if (!confirm("This will erase your identity and all local session data, and reload the page. Continue?")) return;
   location.reload();
 }
 
@@ -242,7 +238,7 @@ $("btnSignLobby").addEventListener("click", async () => {
   const text = $("lobbyText").value;
   const btn = $("btnSignLobby");
   btn.disabled = true;
-  btn.textContent = "در حال ارسال…";
+  btn.textContent = "Publishing…";
   hideResult("lobbyResult");
   try {
     const response = await postSignedMessage(state.identity, LOBBY_ROOM, text);
@@ -256,16 +252,16 @@ $("btnSignLobby").addEventListener("click", async () => {
     updateVault();
     renderLobbyPanel();
   } catch (err) {
-    showResult("lobbyResult", `خطا: ${err.message} — دوباره تلاش کنید.`, true);
+    showResult("lobbyResult", `Error: ${err.message} — please try again.`, true);
   } finally {
     btn.disabled = false;
-    btn.textContent = "امضا و ارسال به لابی";
+    btn.textContent = "Sign & publish to Lobby";
   }
 });
 
 function requireIdentity(resultElId) {
   if (!state.identity) {
-    showResult(resultElId, "ابتدا در Exhibit 01 یک هویت بسازید یا بازیابی کنید.", true);
+    showResult(resultElId, "Create or restore an identity in Exhibit 01 first.", true);
     return false;
   }
   return true;
@@ -329,7 +325,7 @@ $("btnSignRecord").addEventListener("click", async () => {
   const text = $("recordText").value;
   const btn = $("btnSignRecord");
   btn.disabled = true;
-  btn.textContent = "در حال ارسال…";
+  btn.textContent = "Publishing…";
   hideResult("recordResult");
   try {
     const response = await postSignedMessage(state.identity, RECORD_ROOM, text);
@@ -343,10 +339,10 @@ $("btnSignRecord").addEventListener("click", async () => {
     updateVault();
     renderRecordPanel();
   } catch (err) {
-    showResult("recordResult", `خطا: ${err.message} — دوباره تلاش کنید.`, true);
+    showResult("recordResult", `Error: ${err.message} — please try again.`, true);
   } finally {
     btn.disabled = false;
-    btn.textContent = "امضا و ارسال ثبت";
+    btn.textContent = "Sign & publish record";
   }
 });
 
@@ -371,7 +367,7 @@ Contribution: ${contribPart}
 Technocore: ${recordPart}
 
 @flop_labs`;
-    $("shareLede").textContent = "این متن را در X منتشر کنید تا شواهد عمومی مشارکت‌تان دیده شود.";
+    $("shareLede").textContent = "Post this on X so the public evidence of your contribution gets seen.";
   } else {
     text = `I just created a signed, public Technocore identity and posted my first entry.
 
@@ -380,7 +376,7 @@ Lobby: ${lobbyPart}
 
 @flop_labs`;
     $("shareLede").textContent =
-      "هنوز مراحل «مشارکت» و «ثبت» را تمام نکرده‌اید — همین حالا می‌توانید عضویت خود را اعلام کنید و بعداً برای انتشار نسخهٔ کامل به همین‌جا برگردید.";
+      "You haven't finished the Contribution and Record steps yet — you can announce your new identity right now, and come back here later to post the complete version.";
   }
   $("shareText").value = text;
   $("btnOpenX").href = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(text);
@@ -391,7 +387,7 @@ $("btnCopyShare").addEventListener("click", async () => {
     await navigator.clipboard.writeText($("shareText").value);
     const btn = $("btnCopyShare");
     const old = btn.textContent;
-    btn.textContent = "کپی شد ✓";
+    btn.textContent = "Copied ✓";
     setTimeout(() => (btn.textContent = old), 1400);
   } catch {
     /* ignore */

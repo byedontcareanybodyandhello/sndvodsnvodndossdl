@@ -56,14 +56,23 @@ async function requestJson(url, options, { isWrite = false } = {}) {
           `site's address (see the README): ${err.message}`
     );
   }
-  let body;
+  let rawText;
   try {
-    body = await res.json();
+    rawText = await res.text();
   } catch {
-    throw new NetworkError("Technocore returned a non-JSON response");
+    throw new NetworkError("Technocore's response could not be read");
   }
+  let body = null;
+  let parseError = false;
+  if (rawText.trim()) {
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      parseError = true;
+    }
+  }
+
   if (!res.ok) {
-    const detail = typeof body === "object" && body?.error ? body.error : res.statusText || "no response body";
     if (res.status === 422) {
       throw new NetworkError(
         "Technocore rejected this as a near-duplicate of a message posted very recently by someone else " +
@@ -71,12 +80,22 @@ async function requestJson(url, options, { isWrite = false } = {}) {
       );
     }
     if (res.status === 429) {
-      throw new NetworkError(`Technocore is rate-limiting this connection right now: ${detail}. Wait a bit and retry.`);
+      const detail = rawText.trim() || "no further detail in the response body";
+      throw new NetworkError(
+        `Technocore is rate-limiting this connection: ${detail}. This usually means requests are going out ` +
+          "too close together — wait about a minute before trying again, and avoid clicking Sign & Publish " +
+          "more than once per attempt."
+      );
     }
+    const detail = body && typeof body === "object" && body.error ? body.error : rawText.trim() || res.statusText || "no response body";
     throw new NetworkError(`Technocore returned HTTP ${res.status}: ${detail}`);
   }
-  if (typeof body !== "object" || body === null || Array.isArray(body)) {
-    throw new NetworkError("Technocore returned JSON that was not an object");
+
+  if (parseError || body === null || typeof body !== "object" || Array.isArray(body)) {
+    throw new NetworkError(
+      `Technocore returned a 200 OK response that wasn't a JSON object (raw: ${rawText.slice(0, 200)}). ` +
+        "Double-check the request used ?format=json."
+    );
   }
   return body;
 }
